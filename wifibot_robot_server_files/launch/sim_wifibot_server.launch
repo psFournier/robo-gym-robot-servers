@@ -1,0 +1,68 @@
+<?xml version="1.0" ?>
+<launch>
+
+    <arg name="gazebo_gui"  default="false"/>
+    <arg name="world_path"  default="$(find wifibot_robot_server)/worlds"/>
+    <arg name="world_name"  default="empty_world_target.world"/>
+    <arg name="world" value="$(arg world_path)/$(arg world_name)"/>
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(arg world)"/>
+        <arg name="paused" value="false" />
+        <arg name="gui" value="$(arg gazebo_gui)" />
+    </include>
+
+    <!-- Spawn robot -->
+    <arg name="robot_name" default="taz01"/>
+    <arg name="robot_x"   default="0.0"/>
+    <arg name="robot_y"   default="0.0"/>
+    <arg name="robot_yaw" default="0.0"/>
+    <arg name="sensor_list" default="odom use_hector" />
+    <arg name="model_description" default="$(find copernic_gazebo)/urdf/robots/wifibot.gazebo.xacro"/>
+    <param name="robot_description" command="$(find xacro)/xacro '$(arg model_description)'
+            sensor_list:='$(arg sensor_list)'
+        "
+    />
+    <node name="spawn_$(arg robot_name)" pkg="gazebo_ros" type="spawn_model"
+    args="-param robot_description
+        -urdf
+        -x $(arg x)
+        -y $(arg y)
+        -z $(arg z)
+        -model $(arg robot_name)"
+    respawn="false" output="screen">
+    </node>
+
+    <!-- Load controllers parameters -->
+    <rosparam command="load" file="$(find copernic_gazebo)/launch/wifibot/control.yaml"/>
+
+    <!-- Spawn controllers -->
+    <node name="spawner" pkg="controller_manager" type="spawner"
+     args="joint_state_controller velocity_controller"/>
+
+    <!-- convert joint states to TF transforms for rviz, etc -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
+    respawn="false" output="screen">
+    </node>
+
+    <!-- Launch fake localization node -->
+    <include file="$(find mir_gazebo)/launch/fake_localization.launch"></include>
+
+    <!-- Launch Command Handler -->
+    <node name="cmd_vel_command_handler" pkg="mir100_robot_server" type="cmd_vel_command_handler.py" respawn="false" output="screen">
+        <param name="action_cycle_rate" value="10"></param>
+    </node>
+
+    <!-- Launch RViz -->
+    <arg name="gui"         default="false"/>
+    <node if="$(arg gui)" name="$(anon rviz)" pkg="rviz" type="rviz" respawn="false"
+      args="-d $(find mir100_robot_server)/rviz/mir_sim_rl.rviz" output="screen">
+    </node>
+
+    <!--Launch gRPC server -->
+    <arg name="server_port" default="50051"/>
+    <node name="robot_server" pkg="mir100_robot_server" type="robot_server.py" respawn="false" output="screen">
+        <param name="server_port" value="$(arg server_port)"></param>
+        <param name="real_robot"  value="false"></param>
+    </node>
+
+</launch>
