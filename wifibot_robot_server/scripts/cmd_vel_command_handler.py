@@ -8,7 +8,7 @@ class CmdVelCH:
     def __init__(self):
         rospy.init_node('cmd_vel_command_handler')
         # Publisher to Differential Drive robot controller
-        self.cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+        self.cmd_vel_pub = rospy.Publisher('/velocity_controller/cmd_vel', Twist, queue_size=10)
         ac_rate = rospy.get_param('~action_cycle_rate')
         self.rate = rospy.Rate(ac_rate)
         # Subscriber to Velocity Command coming from Environment

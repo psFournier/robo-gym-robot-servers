@@ -6,31 +6,37 @@
     <arg name="server_port" default="50051"/>
 
 
-    <arg name="world_path"  default="$(find mir100_robot_server)/worlds"/>
-    <arg name="world_name"  default="empty_world_target.world"/>
+    <arg name="world_path"  default="$(find simulation_objects)/worlds"/>
+    <arg name="world_name"  default="empty.world"/>
     <arg name="world" value="$(arg world_path)/$(arg world_name)"/>
+
+
+    <group>
+        <remap from="velocity_controller/cmd_vel" to="cmd_vel" />
+        <remap from="velocity_controller/odom"    to="odom" />
+        <remap from="joint_states" to="wifibot/joint_states" />
+        <include file="$(find gazebo_ros)/launch/empty_world.launch">
+            <arg name="world_name" value="$(arg world)"/>
+            <arg name="paused" value="false" />
+            <arg name="gui" value="$(arg gazebo_gui)" />
+        </include>
+    </group>
+
 
     <arg name="x" default="0.0"/>
     <arg name="y" default="0.0"/>
     <arg name="z" default="0.1"/>
 
-    <group>
-      <remap from="joint_states"                to="wifibot/joint_states" />
-      <remap from="velocity_controller/cmd_vel" to="cmd_vel" />
-      <remap from="velocity_controller/odom"    to="odom" />
-
-      <include file="$(find gazebo_ros)/launch/empty_world.launch">
-        <arg name="world_name" value="$(arg world)"/>
-        <arg name="paused" value="false" />
-        <arg name="gui" value="$(arg gazebo_gui)" />
-      </include>
-    </group>
 
     <arg name="robot_name" default="wifibot"/>
-    <arg name="sensor_list" default="use_hector" />
-    <arg name="model_description" default="$(find copernic_gazebo)/urdf/robots/wifibot.gazebo.xacro"/>
+    <arg name="sensor_list" default="bumper lidar camera"/>
+    <arg name="enable_ground_truth" default="true" />
+    <arg name="gpu" default="false" />
+    <arg name="model_description" default="$(find wifibot_robot_server)/urdf/wifibot.gazebo.xacro"/>
     <param name="robot_description" command="$(find xacro)/xacro '$(arg model_description)'
                 sensor_list:='$(arg sensor_list)'
+                enable_ground_truth:='$(arg enable_ground_truth)'
+                gpu:='$(arg gpu)'
             "
     /> 
     <node name="spawn_$(arg robot_name)" pkg="gazebo_ros" type="spawn_model"
@@ -43,23 +49,34 @@
         respawn="false" output="screen">
     </node>
 
-    <rosparam command="load" file="$(find copernic_gazebo)/launch/wifibot/control.yaml" subst_value="true"/>
-        
-    <node name="spawner" pkg="controller_manager" type="spawner" args="joint_state_controller velocity_controller"/>
+    <!--
+    <remap from="velocity_controller/cmd_vel" to="cmd_vel" />
+    <remap from="velocity_controller/odom"    to="odom" />
+-->
 
-    <!-- Add passive + mimic joints to joint_states topic -->
-    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
-        <rosparam param="source_list">[wifibot/joint_states]</rosparam>
-        <!--<remap from="/joint_states" to="/wifibot/joint_states" />-->
-        <param name="rate" value="200.0" />
+
+    <rosparam command="load" file="$(find wifibot_robot_server)/launch/control.yaml" subst_value="true"/>
+        
+    <node name="spawner" pkg="controller_manager" type="spawner" args="joint_state_controller velocity_controller">
     </node>
 
-    <!-- Robot state publisher -->
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen" />
-
-    <!-- Moving the robot in circles
-    <node name="move_wifibot" pkg="wifibot_robot_server" type="test.py" respawn="false" output="screen">
-    </node> -->
+    
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen">
+        
+    </node>
+    
+    
+    <!-- pas 100% clair que c'est inutile : https://answers.ros.org/question/303358/what-is-the-difference-between-joint_state_publisher-and-joint_state_controller/ -->
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+        <rosparam param="source_list">[wifibot/joint_states]</rosparam>
+        <param name="rate" value="200.0" />
+    </node>
+    
+    
+    <!-- Moving the robot in circles -->
+<!--     <node name="move_wifibot" pkg="wifibot_robot_server" type="test.py" respawn="false" output="screen"> -->
+<!--     </node>  -->
+    
     
 
     <!-- Launch fake localization node -->
@@ -68,29 +85,33 @@
         <param name="global_frame_id" value="map"/> 
         <param name="odom_frame_id" value="wifibot/odom"/>
         <param name="base_frame_id" value="wifibot/base_link"/>
-    </node>
+    </node> 
     
-    <!-- Launch robot_pose publisher -->
+
+    <!-- Launch robot_pose publisher
     <node name="robot_pose_publisher" pkg="wifibot_robot_server" type="robot_pose_publisher.py" respawn="false" output="screen">
     </node>
+     -->
 
-    <!-- Launch Command Handler -->
+    <!-- Launch Command Handler
     <node name="cmd_vel_command_handler" pkg="mir100_robot_server" type="cmd_vel_command_handler.py" respawn="false" output="screen">
         <param name="action_cycle_rate" value="10"></param>
     </node>
+    -->
 
-    <!--Launch gRPC server -->
+    <!--Launch gRPC server 
     <node name="robot_server" pkg="wifibot_robot_server" type="robot_server.py" respawn="false" output="screen">
     <param name="server_port" value="$(arg server_port)"></param>
     <param name="real_robot"  value="false"></param>
     </node>
-
+    -->
 
     <!-- Launch RViz -->
     <node if="$(arg gui)" name="$(anon rviz)" pkg="rviz" type="rviz" respawn="false" 
-        args="-d $(find mir100_robot_server)/rviz/mir_sim_rl.rviz" output="screen">
+        args="-d $(find mir100_robot_server)/rviz/mir_sim_rl.rviz"
+        output="screen">
     </node>
-
+    <!-- args="-d $(find mir100_robot_server)/rviz/mir_sim_rl.rviz" -->
 
 
 

@@ -30,17 +30,22 @@ class RosBridge:
         self.env_cmd_vel_pub = rospy.Publisher('env_cmd_vel', Twist, queue_size=1)
         # Target RViz Marker publisher
         self.target_pub = rospy.Publisher('target_marker', Marker, queue_size=10)
-        # Rviz Path publisher : temporarily to mir_exec_path topic
-        self.wifibot_exec_path = rospy.Publisher('mir_exec_path', Path, queue_size=10)
+        # Rviz Path publisher
+        self.exec_path = rospy.Publisher('exec_path', Path, queue_size=10)
         # Odometry of the robot subscriber
-        if self.real_robot:
-            rospy.Subscriber('odom', Odometry, self.callbackOdometry, queue_size=1)
-        else:
-            rospy.Subscriber('odom', Odometry, self.callbackOdometry, queue_size=1)
+        rospy.Subscriber('wifibot/odom', Odometry, self.callbackOdometry, queue_size=1)
+
+        rospy.Subscriber('scan', LaserScan, self.LaserScan_callback)
+        rospy.Subscriber('collision', ContactsState, self.collision_callback)
 
         self.target = [0.0] * 3
-        self.mir_pose = [0.0] * 3
-        self.mir_twist = [0.0] *2
+        self.pose = [0.0] * 3
+        self.twist = [0.0] *2
+        self.scan = [0.0] * 1080
+        self.collision = False
+        self.obstacle_0 = [0.0] * 3
+        self.obstacle_1 = [0.0] * 3
+        self.obstacle_2 = [0.0] * 3
 
         # Reference frame for Path
         self.path_frame = 'map'
@@ -63,9 +68,9 @@ class RosBridge:
         rospy.Subscriber('robot_pose', Pose, self.callbackState, queue_size=1)
 
         # Initialize Path
-        self.mir_path = Path()
-        self.mir_path.header.stamp = rospy.Time.now()
-        self.mir_path.header.frame_id = self.path_frame
+        self.path = Path()
+        self.path.header.stamp = rospy.Time.now()
+        self.path.header.frame_id = self.path_frame
 
         # Flag indicating if it is safe to move backwards
         self.safe_to_move_back = True
@@ -79,16 +84,22 @@ class RosBridge:
         # Get environment state
         state = []
         target = copy.deepcopy(self.target)
-        mir_pose = copy.deepcopy(self.mir_pose)
-        mir_twist = copy.deepcopy(self.mir_twist)
+        pose = copy.deepcopy(self.pose)
+        twist = copy.deepcopy(self.twist)
+        scan = copy.deepcopy(self.scan)
+        in_collision = copy.deepcopy(self.collision)
+        obstacles = [0.0] * 9
 
         self.get_state_event.set()
 
         # Create and fill State message
         msg = robot_server_pb2.State()
         msg.state.extend(target)
-        msg.state.extend(mir_pose)
-        msg.state.extend(mir_twist)
+        msg.state.extend(pose)
+        msg.state.extend(twist)
+        msg.state.extend(scan)
+        msg.state.extend([in_collision])
+        msg.state.extend(obstacles)
         msg.success = 1
         
         return msg
@@ -99,9 +110,9 @@ class RosBridge:
         # Clear reset Event
         self.reset.clear()
         # Re-initialize Path
-        self.mir_path = Path()
-        self.mir_path.header.stamp = rospy.Time.now()
-        self.mir_path.header.frame_id = self.path_frame
+        self.path = Path()
+        self.path.header.stamp = rospy.Time.now()
+        self.path.header.frame_id = self.path_frame
 
         # Set target internal value
         self.target = copy.deepcopy(state[0:3])
@@ -110,14 +121,14 @@ class RosBridge:
 
         if not self.real_robot :
             # Set Gazebo Robot Model state
-            self.set_model_state('mir', copy.deepcopy(state[3:6]))
+            self.set_model_state('wifibot', copy.deepcopy(state[3:6]))
             # Set Gazebo Target Model state
             self.set_model_state('target', copy.deepcopy(state[0:3]))
             # Set obstacles poses
-            if (len(state) > 1021):
-                self.set_model_state('obstacle_0', copy.deepcopy(state[1021:1024]))
-                self.set_model_state('obstacle_1', copy.deepcopy(state[1024:1027]))
-                self.set_model_state('obstacle_2', copy.deepcopy(state[1027:1030]))
+            if (len(state) > 1089):
+                self.set_model_state('obstacle_0', copy.deepcopy(state[1089:1092]))
+                self.set_model_state('obstacle_1', copy.deepcopy(state[1092:1095]))
+                self.set_model_state('obstacle_2', copy.deepcopy(state[1095:1098]))
 
         # Set reset Event
         self.reset.set()
@@ -221,15 +232,15 @@ class RosBridge:
             yaw = euler_orientation[2]
 
             # Append Pose to Path
-            stamped_mir_pose = PoseStamped()
-            stamped_mir_pose.pose = data
-            stamped_mir_pose.header.stamp = rospy.Time.now()
-            stamped_mir_pose.header.frame_id = self.path_frame
-            self.mir_path.poses.append(stamped_mir_pose)
-            self.wifibot_exec_path.publish(self.mir_path)
+            stamped_pose = PoseStamped()
+            stamped_pose.pose = data
+            stamped_pose.header.stamp = rospy.Time.now()
+            stamped_pose.header.frame_id = self.path_frame
+            self.path.poses.append(stamped_pose)
+            self.exec_path.publish(self.path)
 
             # Update internal Pose variable
-            self.mir_pose = copy.deepcopy([x, y, yaw])
+            self.pose = copy.deepcopy([x, y, yaw])
         else:
             pass
 
@@ -238,4 +249,22 @@ class RosBridge:
         ang_vel = data.twist.twist.angular.z
 
         # Update internal Twist variable
-        self.mir_twist = copy.deepcopy([lin_vel, ang_vel])
+        self.twist = copy.deepcopy([lin_vel, ang_vel])
+
+    def LaserScan_callback(self, data):
+        if self.get_state_event.isSet():
+            scan = data.ranges
+            #scan=list(filter(lambda a: a != 0.0, scan))   # remove all 0.0 values that are at beginning and end of scan list
+            scan = np.array(scan)
+            scan = np.nan_to_num(scan)
+            scan = np.clip(scan, data.range_min, data.range_max)
+            self.scan = copy.deepcopy(scan.tolist())
+            self.safe_to_move_back = all(i >= 0.04 for i in scan)
+        else:
+            pass
+
+    def collision_callback(self,data):
+        if data.states == []:
+            self.collision = False
+        else:
+            self.collision = True

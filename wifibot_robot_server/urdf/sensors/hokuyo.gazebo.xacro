@@ -1,0 +1,101 @@
+<?xml version="1.0" ?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="hokuyo" params="namespace parent *origin gpu">
+
+    <joint name="lidar_joint" type="fixed">
+      <xacro:insert_block name="origin"/>
+      <parent link="${parent}" />
+      <child link="${namespace}/lidar" />
+    </joint>
+
+    <link name="${namespace}/lidar">
+      <inertial>
+        <origin xyz="0 0 0"/>
+        <mass value="0.100"/>
+        <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      </inertial>
+      <visual>
+        <geometry>
+          <box size="0.035 0.035 0.04"/>
+        </geometry>
+        <material name="green"/>
+      </visual>
+    </link>
+
+    <gazebo reference="${namespace}/lidar">
+      <material>Gazebo/Green</material>
+
+      <xacro:if value="${gpu}">
+        <sensor type="gpu_ray" name="lidar">
+          <pose>0 0 0 0 0 0</pose>
+          <visualize>true</visualize>
+          <update_rate>40</update_rate>
+          <ray>
+            <scan>
+              <horizontal>
+                <samples>1080</samples>
+                <resolution>1</resolution>
+                <min_angle>-2.3562</min_angle>
+                <max_angle>2.3562</max_angle>
+              </horizontal>
+            </scan>
+            <range>
+              <min>0.10</min>
+              <max>30.0</max>
+              <resolution>0.01</resolution>
+            </range>
+              <noise>
+                <type>gaussian</type>
+                <mean>0.0</mean>
+                <stddev>0.01</stddev>
+              </noise>
+          </ray>
+          <plugin name="hokuyo_controller" filename="libgazebo_ros_gpu_laser.so">
+            <robotNamespace>/${namespace}</robotNamespace>
+            <topicName>scan</topicName>
+            <frameName>lidar</frameName>
+          </plugin>
+        </sensor>
+      </xacro:if>
+
+      <xacro:unless value="${gpu}">
+        <sensor type="ray" name="lidar">
+          <pose>0 0 0 0 0 0</pose>
+          <visualize>true</visualize>
+          <update_rate>40</update_rate>
+          <ray>
+            <scan>
+              <horizontal>
+                <samples>1080</samples>
+                <resolution>1</resolution>
+                <min_angle>-2.3562</min_angle>
+                <max_angle>2.3562</max_angle>
+              </horizontal>
+            </scan>
+            <range>
+              <min>0.10</min>
+              <max>30.0</max>
+              <resolution>0.01</resolution>
+            </range>
+              <noise>
+                <type>gaussian</type>
+                <mean>0.0</mean>
+                <stddev>0.01</stddev>
+              </noise>
+          </ray>
+          <plugin name="hokuyo_controller" filename="libgazebo_ros_laser.so">
+            <robotNamespace>/${namespace}</robotNamespace>
+            <topicName>scan</topicName>
+            <frameName>${namespace}/lidar</frameName>
+          </plugin>
+
+        </sensor>
+      </xacro:unless>
+
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>
