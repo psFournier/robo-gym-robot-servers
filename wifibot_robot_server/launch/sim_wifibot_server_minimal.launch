@@ -4,18 +4,17 @@
     <!-- these are the arguments you can pass this launch file, for example paused:=true -->
     <arg name="paused" default="false"/>
     <arg name="use_sim_time" default="true"/>
-    <arg name="gui" default="true"/>
-    <arg name="headless" default="false"/>
-    <arg name="debug" default="false"/>
+    <arg name="rviz_gui" default="false"/>
+    <arg name="gui"  default="false"/>
+    <arg name="world_name"  default="target_only"/>
+    <arg name="server_port" default="50051"/>
 
     <!-- We resume the logic in empty_world.launch, changing only the name of the world to be launched -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
-        <arg name="world_name" value="$(find wifibot_robot_server)/worlds/lab_6x8.world"/>
-        <arg name="debug" value="$(arg debug)" />
+        <arg name="world_name" value="$(find wifibot_robot_server)/worlds/$(arg world_name).world"/>
         <arg name="gui" value="$(arg gui)" />
         <arg name="paused" value="$(arg paused)"/>
         <arg name="use_sim_time" value="$(arg use_sim_time)"/>
-        <arg name="headless" value="$(arg headless)"/>
     </include>
 
     <arg name="x" default="0.0"/>
@@ -87,8 +86,8 @@
     <param name="real_robot"  value="false"></param>
     </node>
 
-<!--     Show in Rviz   -->
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find wifibot_robot_server)/rviz/wifibot.rviz">
+    <!-- Launch RViz -->
+    <node if="$(arg rviz_gui)" name="rviz" pkg="rviz" type="rviz" args="-d $(find wifibot_robot_server)/rviz/wifibot.rviz">
     </node>
 
 </launch>
