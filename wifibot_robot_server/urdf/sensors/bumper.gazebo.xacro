@@ -1,0 +1,49 @@
+<?xml version="1.0" ?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="bumper" params="namespace parent *origin *box visual">
+
+    <joint name="bumper_joint" type="fixed">
+      <parent link="${parent}" />
+      <child link="${namespace}/bumper" />
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <link name="${namespace}/bumper">
+      <xacro:if value="${visual}">
+        <visual>
+          <geometry>
+            <xacro:insert_block name="box"/>
+          </geometry>
+        </visual>
+      </xacro:if>
+
+      <collision name="bumper">
+        <geometry>
+          <xacro:insert_block name="box"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <gazebo reference="${namespace}/bumper">
+      <maxContacts>1</maxContacts>
+      <minDepth>0.0001</minDepth>
+      <sensor name="bumper" type="contact">
+        <always_on>true</always_on>
+        <update_rate>50.0</update_rate>
+        <contact>
+          <collision>${namespace}/base_link_fixed_joint_lump__bumper_collision_1</collision>
+        </contact>
+        <plugin name="bumper_controller" filename="libgazebo_ros_bumper.so">
+          <bumperTopicName>${namespace}/bumper</bumperTopicName>
+          <frameName>world</frameName>
+          <always_on>true</always_on>
+          <update_rate>50.0</update_rate>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

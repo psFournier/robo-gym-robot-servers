@@ -47,10 +47,10 @@
 
   <!-- Bumper: collision detection ; attention on utilise clairement une boite autour du robot comme box simplifiée pour le bumper... donc pas un bumper réel ?-->
   <xacro:if value="$(eval 'bumper' in sensor_list)">
-    <xacro:include filename="$(find copernic_gazebo)/urdf/sensors/others/bumper.gazebo.xacro" />
+    <xacro:include filename="$(find wifibot_robot_server)/urdf/sensors/bumper.gazebo.xacro" />
     <xacro:bumper namespace="${namespace}" parent="${namespace}/base_link" visual="false" >
-          <origin xyz=" 0.0 0.0 0.15" rpy="0 0 0"/>
-          <box size="0.50 0.50 0.40"/>
+          <origin xyz=" 0.0 0.0 0.5" rpy="0 0 0"/>
+          <box size="0.30 0.39 0.15"/>
     </xacro:bumper>
   </xacro:if>
 

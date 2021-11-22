@@ -22,7 +22,7 @@
     <arg name="z" default="0.1"/>
 
     <arg name="robot_name" default="wifibot"/>
-    <arg name="sensor_list" default="lidar camera"/> <!-- removed bumper for now -->
+    <arg name="sensor_list" default="lidar camera bumper"/>
     <arg name="enable_ground_truth" default="false" />
     <arg name="gpu" default="false" />
     <arg name="model_description" default="$(find wifibot_robot_server)/urdf/wifibot.gazebo.xacro"/>

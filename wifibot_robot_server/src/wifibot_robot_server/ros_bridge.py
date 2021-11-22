@@ -6,6 +6,7 @@ from gazebo_msgs.msg import ModelState, ContactsState
 from gazebo_msgs.srv import GetModelState, SetModelState
 from visualization_msgs.msg import Marker
 from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import CameraInfo, Image
 from nav_msgs.msg import Path
 import PyKDL
 import tf2_ros
@@ -14,6 +15,8 @@ from tf_conversions import posemath
 from threading import Event
 import numpy as np
 from robo_gym_server_modules.robot_server.grpc_msgs.python import robot_server_pb2
+from cv_bridge import CvBridge
+import base64
 
 class RosBridge:
 
@@ -24,6 +27,7 @@ class RosBridge:
         self.reset.clear()
         self.get_state_event = Event()
         self.get_state_event.set()
+        self.cv_bridge = CvBridge()
 
         self.real_robot = real_robot
         # cmd_vel_command_handler publisher
@@ -35,8 +39,10 @@ class RosBridge:
         # Odometry of the robot subscriber
         rospy.Subscriber('wifibot/odom', Odometry, self.callbackOdometry, queue_size=1)
 
-        rospy.Subscriber('scan', LaserScan, self.LaserScan_callback)
-        rospy.Subscriber('collision', ContactsState, self.collision_callback)
+        rospy.Subscriber('wifibot/scan', LaserScan, self.LaserScan_callback)
+        rospy.Subscriber('wifibot/bumper', ContactsState, self.collision_callback)
+        rospy.Subscriber('wifibot/camera1/image_raw', Image, self.image_callback)
+        # rospy.Subscriber('wifibot/camera1/camera_info', CameraInfo, self.camera_info_callback)
 
         self.target = [0.0] * 3
         self.pose = [0.0] * 3
@@ -46,6 +52,8 @@ class RosBridge:
         self.obstacle_0 = [0.0] * 3
         self.obstacle_1 = [0.0] * 3
         self.obstacle_2 = [0.0] * 3
+        self.image = None
+        # self.camera_info =
 
         # Reference frame for Path
         self.path_frame = 'map'
@@ -104,6 +112,17 @@ class RosBridge:
         
         return msg
 
+    def get_image(self):
+        self.get_state_event.clear()
+        image = copy.deepcopy(self.image)
+        self.get_state_event.set()
+        msg = robot_server_pb2.B64Image()
+        msg.b64image = base64.b64encode(image)
+        msg.success = 1
+
+        return msg
+
+
     def set_state(self, state_msg):
         # Set environment state
         state = state_msg.state
@@ -155,6 +174,10 @@ class RosBridge:
     def odometry_callback(self, data):
         # Save robot velocities from Odometry internally
         self.robot_twist = data.twist.twist
+
+    def image_callback(self, msg):
+        rospy.loginfo('Image received...')
+        self.image = np.asarray(self.cv_bridge.imgmsg_to_cv2(msg))
 
     def get_robot_state(self):
         # method to get robot position from real mir
@@ -254,7 +277,8 @@ class RosBridge:
     def LaserScan_callback(self, data):
         if self.get_state_event.isSet():
             scan = data.ranges
-            #scan=list(filter(lambda a: a != 0.0, scan))   # remove all 0.0 values that are at beginning and end of scan list
+            # print("scan read: max = ", max(scan))
+            # scan=list(filter(lambda a: a != 0.0, scan))   # remove all 0.0 values that are at beginning and end of scan list
             scan = np.array(scan)
             scan = np.nan_to_num(scan)
             scan = np.clip(scan, data.range_min, data.range_max)
