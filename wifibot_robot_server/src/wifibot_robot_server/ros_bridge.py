@@ -15,8 +15,9 @@ from tf_conversions import posemath
 from threading import Event
 import numpy as np
 from robo_gym_server_modules.robot_server.grpc_msgs.python import robot_server_pb2
-from cv_bridge import CvBridge
 import base64
+# from rospy.numpy_msg import numpy_msg
+from cv_bridge import CvBridge
 
 class RosBridge:
 
@@ -116,8 +117,12 @@ class RosBridge:
         self.get_state_event.clear()
         image = copy.deepcopy(self.image)
         self.get_state_event.set()
-        msg = robot_server_pb2.B64Image()
-        msg.b64image = base64.b64encode(image)
+        msg = robot_server_pb2.ByteImage()
+        msg.image = image.tobytes(order='C')
+        w, h, c = image.shape
+        msg.width = w
+        msg.height = h
+        msg.channel = c
         msg.success = 1
 
         return msg
@@ -175,9 +180,8 @@ class RosBridge:
         # Save robot velocities from Odometry internally
         self.robot_twist = data.twist.twist
 
-    def image_callback(self, msg):
-        rospy.loginfo('Image received...')
-        self.image = np.asarray(self.cv_bridge.imgmsg_to_cv2(msg))
+    def image_callback(self, data):
+        self.image = np.asarray(self.cv_bridge.imgmsg_to_cv2(data, "rgb8"), dtype="int8")
 
     def get_robot_state(self):
         # method to get robot position from real mir
