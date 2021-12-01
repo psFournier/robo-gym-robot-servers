@@ -31,12 +31,6 @@ class RobotServerServicer(robot_server_pb2_grpc.RobotServerServicer):
         except:
             return robot_server_pb2.Success(success=0)
 
-    def GetImage(self, request, context):
-        try:
-            return self.rosbridge.get_image()
-        except:
-            return robot_server_pb2.B64Image(success=0)
-
 
 def serve():
     server_port = rospy.get_param('~server_port')

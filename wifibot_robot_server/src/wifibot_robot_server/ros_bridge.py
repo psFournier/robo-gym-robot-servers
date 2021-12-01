@@ -98,6 +98,7 @@ class RosBridge:
         scan = copy.deepcopy(self.scan)
         in_collision = copy.deepcopy(self.collision)
         obstacles = [0.0] * 9
+        image = copy.deepcopy(self.image)
 
         self.get_state_event.set()
 
@@ -109,24 +110,14 @@ class RosBridge:
         msg.state.extend(scan)
         msg.state.extend([in_collision])
         msg.state.extend(obstacles)
-        msg.success = 1
-        
-        return msg
-
-    def get_image(self):
-        self.get_state_event.clear()
-        image = copy.deepcopy(self.image)
-        self.get_state_event.set()
-        msg = robot_server_pb2.ByteImage()
         msg.image = image.tobytes(order='C')
         w, h, c = image.shape
         msg.width = w
         msg.height = h
         msg.channel = c
         msg.success = 1
-
+        
         return msg
-
 
     def set_state(self, state_msg):
         # Set environment state
