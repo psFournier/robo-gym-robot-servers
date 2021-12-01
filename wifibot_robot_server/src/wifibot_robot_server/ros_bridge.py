@@ -38,7 +38,7 @@ class RosBridge:
         # Rviz Path publisher
         self.exec_path = rospy.Publisher('exec_path', Path, queue_size=10)
         # Odometry of the robot subscriber
-        rospy.Subscriber('wifibot/odom', Odometry, self.callbackOdometry, queue_size=1)
+        rospy.Subscriber('velocity_controller/odom', Odometry, self.callbackOdometry, queue_size=1)
 
         rospy.Subscriber('wifibot/scan', LaserScan, self.LaserScan_callback)
         rospy.Subscriber('wifibot/bumper', ContactsState, self.collision_callback)

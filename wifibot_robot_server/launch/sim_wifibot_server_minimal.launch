@@ -44,7 +44,7 @@
         respawn="false" output="screen">
     </node>
 
-    <rosparam command="load" file="$(find wifibot_robot_server)/launch/control.yaml" subst_value="true"/>
+    <rosparam command="load" file="$(find wifibot_robot_server)/launch/control.yaml"/>
 
     <node name="spawner" pkg="controller_manager" type="spawner" args="joint_state_controller velocity_controller">
 <!--     <node name="spawner" pkg="controller_manager" type="spawner" args="joint_state_controller"> -->
@@ -62,8 +62,8 @@
     <!-- Launch fake localization node -->
     <node pkg="fake_localization" type="fake_localization" name="fake_localization" output="screen" >
         <remap from="base_pose_ground_truth" to="/velocity_controller/odom"/>
-        <param name="global_frame_id" value="map"/>
-        <param name="odom_frame_id" value="wifibot/odom"/>
+<!--         <param name="global_frame_id" value="map"/> -->
+<!--         <param name="odom_frame_id" value="wifibot/odom"/> -->
         <param name="base_frame_id" value="wifibot/base_link"/>
     </node>
 
